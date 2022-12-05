@@ -6,7 +6,7 @@ import { faker } from '@faker-js/faker';
 describe('Test with backend', () => {
 
     beforeEach('login to the app', () => {
-        cy.intercept('GET', 'https://api.realworld.io/api/tags', {fixture: 'tags.json'})
+        cy.intercept({method: 'Get', path: 'tags'}, {fixture: 'tags.json'})
         cy.loginToApplication()
     })
 
@@ -17,7 +17,7 @@ describe('Test with backend', () => {
 
         cy.contains('New Article').click()
         cy.get('[formcontrolname="title"]').type(`This is a title ${faker.word.noun()}`);
-        cy.get('[formcontrolname="description"]').type('This is the a description')
+        cy.get('[formcontrolname="description"]').type('This is a description')
         cy.get('[formcontrolname="body"]').type('This is a body of the article')
         cy.contains('Publish Article').click()
 
@@ -25,7 +25,37 @@ describe('Test with backend', () => {
             console.log(xhr)
             expect(xhr.response.statusCode).to.equal(200)
             expect(xhr.request.body.article.body).to.equal('This is a body of the article')
-            expect(xhr.response.body.article.description).to.equals('This is the a description')
+            expect(xhr.response.body.article.description).to.equals('This is a description')
+        })
+
+    })
+
+    it('intercepting and modifying the request and response', () => {
+        
+        // This is modification of the request
+        cy.intercept('POST', 'https://api.realworld.io/api/articles/', (req) => {
+            req.body.article.description = "This is a description 2"
+        }).as('postArticles')
+
+        // This is the modification of the response
+        cy.intercept('POST', 'https://api.realworld.io/api/articles/', (req) => {
+            req.reply( res => {
+                expect(res.body.article.description).to.equal('This is a description')
+                res.body.article.description = "This is a description 2"
+            })
+        }).as('postArticles')
+
+        cy.contains('New Article').click()
+        cy.get('[formcontrolname="title"]').type(`This is a title ${faker.word.noun()}`);
+        cy.get('[formcontrolname="description"]').type('This is a description')
+        cy.get('[formcontrolname="body"]').type('This is a body of the article')
+        cy.contains('Publish Article').click()
+
+        cy.wait('@postArticles').then( xhr => {
+            console.log(xhr)
+            expect(xhr.response.statusCode).to.equal(200)
+            expect(xhr.request.body.article.body).to.equal('This is a body of the article')
+            expect(xhr.response.body.article.description).to.equal('This is a description 2')
         })
 
     })
@@ -39,7 +69,7 @@ describe('Test with backend', () => {
     })
 
     // Intercept global articles and display only 2 and change the number of likes on them
-    it.only('verify global feed likes count', () => {
+    it('verify global feed likes count', () => {
         cy.intercept('GET', 'https://api.realworld.io/api/articles/feed*', '{"articles":[],"articlesCount":0}')
         cy.intercept('GET', 'https://api.realworld.io/api/articles*', {fixture: 'articles.json'})
 
@@ -53,7 +83,7 @@ describe('Test with backend', () => {
         cy.fixture('articles').then(file => {
             const articleLink = file.articles[1].slug
             file.articles[1].favoritesCount = 6
-            cy.intercept('POST', 'https://api.realworld.io/api/articles/'+articleLink+'/favorite', file)
+            cy.intercept('POST', 'https://api.realworld.io/api/articles/'+ articleLink +'/favorite', file)
         })
 
         cy.get('app-article-list button').eq(1).click().should('contain', '6')
