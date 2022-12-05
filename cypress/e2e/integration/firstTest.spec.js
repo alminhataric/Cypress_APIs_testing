@@ -1,18 +1,22 @@
 /// <reference types="cypress" />
 
+import { faker } from '@faker-js/faker';
+
 
 describe('Test with backend', () => {
 
     beforeEach('login to the app', () => {
+        cy.intercept('GET', 'https://api.realworld.io/api/tags', {fixture: 'tags.json'})
         cy.loginToApplication()
     })
 
+    // Verify and intercept creating article status code
     it('verify correct request and response', () => {
         
         cy.intercept('POST', 'https://api.realworld.io/api/articles/').as('postArticles')
 
         cy.contains('New Article').click()
-        cy.get('[formcontrolname="title"]').type(`This is a title ${Math.random()}`);
+        cy.get('[formcontrolname="title"]').type(`This is a title ${faker.word.noun()}`);
         cy.get('[formcontrolname="description"]').type('This is the a description')
         cy.get('[formcontrolname="body"]').type('This is a body of the article')
         cy.contains('Publish Article').click()
@@ -23,6 +27,36 @@ describe('Test with backend', () => {
             expect(xhr.request.body.article.body).to.equal('This is a body of the article')
             expect(xhr.response.body.article.description).to.equals('This is the a description')
         })
+
+    })
+
+    // Verify and intercept api call for tags and replace them with new ones
+    it('verify popular tags are displayed', () => {
+        cy.get('.tag-list')
+        .should('contain', 'cypress')
+        .and('contain', 'automation')
+        .and('contain', 'testing')
+    })
+
+    // Intercept global articles and display only 2 and change the number of likes on them
+    it.only('verify global feed likes count', () => {
+        cy.intercept('GET', 'https://api.realworld.io/api/articles/feed*', '{"articles":[],"articlesCount":0}')
+        cy.intercept('GET', 'https://api.realworld.io/api/articles*', {fixture: 'articles.json'})
+
+        cy.contains('Global Feed').click()
+        cy.get('app-article-list button').then(heartList => {
+            expect(heartList[0]).to.contain('1')
+            expect(heartList[1]).to.contain('5')
+        })
+
+        //If we click on hear like that number changes
+        cy.fixture('articles').then(file => {
+            const articleLink = file.articles[1].slug
+            file.articles[1].favoritesCount = 6
+            cy.intercept('POST', 'https://api.realworld.io/api/articles/'+articleLink+'/favorite', file)
+        })
+
+        cy.get('app-article-list button').eq(1).click().should('contain', '6')
 
     })
 
