@@ -90,4 +90,52 @@ describe('Test with backend', () => {
 
     })
 
+    it('delete a new article in a global feed', () => {
+
+        const userCredentials = {
+            "user": {
+                "email": "artem.bondar16@gmail.com",
+                "password": "CypressTest1"
+            }
+        }
+
+        const bodyRequest = {
+            "article": {
+                "tagList": [],
+                "title": "Request from API 1.1",
+                "description": "API testing is easy",
+                "body": "Angular is cool"
+            }
+        }
+
+        // Loging in and posting the new article on global feed
+        cy.request('POST', 'https://api.realworld.io/api/users/login', userCredentials)
+        .its('body').then(body => {
+            const token = body.user.token
+
+            cy.request({
+                url: 'https://api.realworld.io/api/articles/',
+                headers: { 'Authorization': 'Token '+token},
+                method: 'POST',
+                body: bodyRequest
+            }).then( response => {
+                expect(response.status).to.equal(200)
+            })
+
+            // cy.contains('Global Feed').click()
+            // cy.get('.article-preview').first().click()
+            // cy.get('.article-actions').contains('Delete Article').click()
+            
+            cy.request({
+                url: 'https://api.realworld.io/api/articles?limit=10&offset=0',
+                headers: { 'Authorization': 'Token '+token},
+                method: 'GET'
+            }).its('body').then( body => {
+                expect(body.articles[0].title).not.to.equal('Request from API 1.1')
+            })
+
+        })
+
+    })
+
 })
