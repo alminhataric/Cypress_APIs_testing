@@ -1,4 +1,5 @@
 /// <reference types="cypress" />
+
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -37,8 +38,25 @@
 // }
 
 Cypress.Commands.add('loginToApplication', () => {
-    cy.visit('http://localhost:4200/login')
-    cy.get('[placeholder="Email"]').type('artem.bondar16@gmail.com')
-    cy.get('[placeholder="Password"]').type('CypressTest1')
-    cy.get('form').submit()
+    
+
+    const userCredentials = {
+        "user": {
+            "email": "artem.bondar16@gmail.com",
+            "password": "CypressTest1"
+        }
+    }
+
+    cy.request('POST', 'https://api.realworld.io/api/users/login', userCredentials)
+        .its('body').then( body => {
+            const token = body.user.token
+            cy.wrap(token).as('token')
+            cy.visit('http://localhost:4200/', {
+                onBeforeLoad (win){
+                    win.localStorage.setItem('jwtToken', token)
+                }
+            })
+
+        })
+
 })

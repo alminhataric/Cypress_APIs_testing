@@ -92,12 +92,11 @@ describe('Test with backend', () => {
 
     it('delete a new article in a global feed', () => {
 
-        const userCredentials = {
-            "user": {
-                "email": "artem.bondar16@gmail.com",
-                "password": "CypressTest1"
-            }
-        }
+        cy.intercept(
+            "DELETE",
+            "https://api.realworld.io/api/articles/*",
+            () => {}
+        ).as("deleteArticles");
 
         const bodyRequest = {
             "article": {
@@ -109,9 +108,7 @@ describe('Test with backend', () => {
         }
 
         // Loging in and posting the new article on global feed
-        cy.request('POST', 'https://api.realworld.io/api/users/login', userCredentials)
-        .its('body').then(body => {
-            const token = body.user.token
+        cy.get('@token').then(token => {
 
             cy.request({
                 url: 'https://api.realworld.io/api/articles/',
@@ -122,10 +119,11 @@ describe('Test with backend', () => {
                 expect(response.status).to.equal(200)
             })
 
-            // cy.contains('Global Feed').click()
-            // cy.get('.article-preview').first().click()
-            // cy.get('.article-actions').contains('Delete Article').click()
+            cy.contains('Global Feed').click()
+            cy.get('.article-preview').first().click()
+            cy.get('.article-actions').contains('Delete Article').click()
             
+            cy.wait("@deleteArticles");
             cy.request({
                 url: 'https://api.realworld.io/api/articles?limit=10&offset=0',
                 headers: { 'Authorization': 'Token '+token},
