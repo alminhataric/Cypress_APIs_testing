@@ -90,7 +90,7 @@ describe('Test with backend', () => {
 
     })
 
-    it.only('delete a new article in a global feed', () => {
+    it('delete a new article in a global feed', () => {
 
         cy.intercept(
             "DELETE",
@@ -111,7 +111,7 @@ describe('Test with backend', () => {
         cy.get('@token').then(token => {
 
             cy.request({
-                url: Cypress.env('apiUrl')+'/api/articles/',
+                url: 'https://api.realworld.io/api/articles/',
                 headers: { 'Authorization': 'Token '+token},
                 method: 'POST',
                 body: bodyRequest
@@ -125,7 +125,7 @@ describe('Test with backend', () => {
             
             cy.wait("@deleteArticles");
             cy.request({
-                url: Cypress.env('apiUrl')+'/api/articles?limit=10&offset=0',
+                url: 'https://api.realworld.io/api/articles?limit=10&offset=0',
                 headers: { 'Authorization': 'Token '+token},
                 method: 'GET'
             }).its('body').then( body => {
